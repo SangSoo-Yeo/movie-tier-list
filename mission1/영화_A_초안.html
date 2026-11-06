@@ -1,0 +1,1297 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>영화 티어리스트</title>
+  <style>
+    :root {
+      --bg-color: #14161C;
+      --surface-color: #232733;
+      --surface-hover: #2C3140;
+      --surface-border: #383E52;
+      --text-color: #F5F5F7;
+      --text-muted: #A0A6B8;
+      --label-text: #14161C;
+      
+      --tier-s: #E5484D;
+      --tier-a: #F08C3A;
+      --tier-b: #E9C53B;
+      --tier-c: #5BB974;
+      --tier-d: #4A90D9;
+      --tier-f: #8E7CC3;
+      
+      --accent: #4A90D9;
+      --danger: #E5484D;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      font-family: "Pretendard", "Malgun Gothic", "맑은 고딕", "Apple SD Gothic Neo", sans-serif;
+      line-height: 1.4;
+      padding: 24px 32px 60px;
+      min-height: 100vh;
+      user-select: none;
+    }
+
+    /* 상단 헤더 및 컨트롤 영역 */
+    .header {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 24px;
+      padding-bottom: 18px;
+      border-bottom: 2px solid var(--surface-border);
+    }
+
+    .title-group h1 {
+      font-size: 2rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .title-group p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      margin-top: 4px;
+    }
+
+    .top-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .btn {
+      background-color: var(--surface-color);
+      color: var(--text-color);
+      border: 2px solid var(--surface-border);
+      padding: 12px 20px;
+      font-size: 1.05rem;
+      font-weight: 700;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: inherit;
+    }
+
+    .btn:hover {
+      background-color: var(--surface-hover);
+      border-color: var(--text-muted);
+      transform: translateY(-1px);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+    }
+
+    .btn-primary {
+      background-color: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background-color: #3a7bc2;
+      border-color: #3a7bc2;
+    }
+
+    .btn-danger {
+      border-color: rgba(229, 72, 77, 0.5);
+      color: #ff8b8e;
+    }
+
+    .btn-danger:hover {
+      background-color: rgba(229, 72, 77, 0.15);
+      border-color: var(--danger);
+    }
+
+    .btn-danger.active {
+      background-color: var(--danger);
+      border-color: var(--danger);
+      color: #fff;
+      box-shadow: 0 0 16px rgba(229, 72, 77, 0.5);
+    }
+
+    /* 삭제 모드 알림 배너 */
+    .mode-banner {
+      display: none;
+      background-color: rgba(229, 72, 77, 0.18);
+      border: 2px solid var(--danger);
+      color: #ffccd0;
+      padding: 14px 20px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      font-size: 1.1rem;
+      font-weight: 700;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .mode-banner.show {
+      display: flex;
+    }
+
+    /* 티어 보드 영역 */
+    .tier-board {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 32px;
+    }
+
+    .tier-row {
+      display: flex;
+      min-height: 148px;
+      background-color: var(--surface-color);
+      border: 2px solid var(--surface-border);
+      border-radius: 12px;
+      overflow: hidden;
+      transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .tier-label {
+      width: 110px;
+      min-width: 110px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.8rem;
+      font-weight: 900;
+      color: var(--label-text);
+      letter-spacing: -1px;
+      border-right: 2px solid var(--bg-color);
+    }
+
+    .tier-label[data-tier="S"] { background-color: var(--tier-s); }
+    .tier-label[data-tier="A"] { background-color: var(--tier-a); }
+    .tier-label[data-tier="B"] { background-color: var(--tier-b); }
+    .tier-label[data-tier="C"] { background-color: var(--tier-c); }
+    .tier-label[data-tier="D"] { background-color: var(--tier-d); }
+    .tier-label[data-tier="F"] { background-color: var(--tier-f); }
+
+    .tier-dropzone {
+      flex: 1;
+      padding: 14px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      align-items: center;
+      align-content: flex-start;
+      min-height: 144px;
+      transition: background-color 0.15s ease;
+    }
+
+    /* 미분류 영역 */
+    .unclassified-section {
+      background-color: var(--surface-color);
+      border: 2px solid var(--surface-border);
+      border-radius: 12px;
+      padding: 20px;
+      transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .unclassified-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .unclassified-title {
+      font-size: 1.4rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .badge-count {
+      background-color: var(--bg-color);
+      color: var(--text-muted);
+      font-size: 1rem;
+      padding: 2px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--surface-border);
+    }
+
+    .unclassified-hint {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    .unclassified-dropzone {
+      min-height: 165px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      align-items: center;
+      align-content: flex-start;
+      padding: 8px;
+      border-radius: 8px;
+    }
+
+    .empty-placeholder {
+      width: 100%;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 1.15rem;
+      padding: 36px 0;
+      pointer-events: none;
+    }
+
+    /* 드래그 오버 하이라이트 */
+    .drop-active {
+      border-color: #F5F5F7 !important;
+      background-color: #2E3446 !important;
+      box-shadow: 0 0 0 3px rgba(245, 245, 247, 0.25);
+    }
+
+    /* 영화 카드 스타일 (큰 화면 가독성 최적화) */
+    .movie-card {
+      width: 156px;
+      height: 126px;
+      background-color: #1B1E28;
+      border: 2px solid #3A4054;
+      border-radius: 10px;
+      position: relative;
+      cursor: grab;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 12px;
+      text-align: center;
+      overflow: hidden;
+      transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
+    }
+
+    .movie-card.has-poster {
+      height: 210px;
+      padding: 0;
+      justify-content: flex-end;
+    }
+
+    .movie-card:hover {
+      transform: translateY(-3px);
+      border-color: #8C96B5;
+      filter: brightness(1.08);
+      box-shadow: 0 8px 18px rgba(0, 0, 0, 0.5);
+    }
+
+    .movie-card:focus-visible {
+      outline: 3px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    .movie-card.dragging {
+      opacity: 0.45;
+      border: 2px dashed #F5F5F7;
+      transform: scale(0.96);
+      filter: brightness(1.25);
+      cursor: grabbing;
+    }
+
+    /* 삭제 모드일 때 카드 스타일 */
+    body.delete-mode .movie-card {
+      border-color: rgba(229, 72, 77, 0.75);
+      cursor: pointer;
+    }
+
+    body.delete-mode .movie-card:hover {
+      border-color: var(--danger);
+      box-shadow: 0 0 16px rgba(229, 72, 77, 0.5);
+    }
+
+    .delete-badge {
+      display: none;
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background-color: var(--danger);
+      color: #fff;
+      font-size: 0.8rem;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 6px;
+      z-index: 3;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+    }
+
+    body.delete-mode .delete-badge {
+      display: block;
+    }
+
+    .card-poster {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    .card-title {
+      position: relative;
+      z-index: 2;
+      font-size: 1.32rem;
+      font-weight: 800;
+      color: var(--text-color);
+      word-break: keep-all;
+      overflow-wrap: break-word;
+      line-height: 1.3;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    .movie-card.has-poster .card-title {
+      width: 100%;
+      background: linear-gradient(to top, rgba(14, 16, 22, 0.96) 0%, rgba(14, 16, 22, 0.82) 70%, transparent 100%);
+      padding: 24px 8px 10px;
+      font-size: 1.15rem;
+      -webkit-line-clamp: 2;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9);
+    }
+
+    /* 모달 팝업 공통 */
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background-color: rgba(10, 12, 16, 0.78);
+      backdrop-filter: blur(3px);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-backdrop.open {
+      display: flex;
+    }
+
+    .modal {
+      background-color: var(--surface-color);
+      border: 2px solid var(--surface-border);
+      border-radius: 16px;
+      width: 100%;
+      max-width: 500px;
+      padding: 28px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.65);
+      animation: modalFadeIn 0.15s ease-out;
+    }
+
+    @keyframes modalFadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(8px) scale(0.98);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .modal-title {
+      font-size: 1.55rem;
+      font-weight: 800;
+      word-break: keep-all;
+    }
+
+    .modal-close {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 1.6rem;
+      line-height: 1;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 6px;
+    }
+
+    .modal-close:hover {
+      color: var(--text-color);
+      background-color: var(--surface-hover);
+    }
+
+    .modal-section-label {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+      display: block;
+    }
+
+    /* 카드 클릭 시 등급 선택 버튼 그리드 */
+    .tier-btn-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .tier-select-btn {
+      padding: 14px 10px;
+      border-radius: 10px;
+      border: 3px solid transparent;
+      font-size: 1.4rem;
+      font-weight: 900;
+      color: var(--label-text);
+      cursor: pointer;
+      transition: transform 0.1s ease, filter 0.1s ease;
+      font-family: inherit;
+    }
+
+    .tier-select-btn:hover {
+      transform: translateY(-2px);
+      filter: brightness(1.08);
+    }
+
+    .tier-select-btn.current {
+      border-color: #F5F5F7;
+      box-shadow: 0 0 0 2px var(--bg-color) inset;
+    }
+
+    .tier-select-btn[data-target="S"] { background-color: var(--tier-s); }
+    .tier-select-btn[data-target="A"] { background-color: var(--tier-a); }
+    .tier-select-btn[data-target="B"] { background-color: var(--tier-b); }
+    .tier-select-btn[data-target="C"] { background-color: var(--tier-c); }
+    .tier-select-btn[data-target="D"] { background-color: var(--tier-d); }
+    .tier-select-btn[data-target="F"] { background-color: var(--tier-f); }
+
+    .unclassified-select-btn {
+      width: 100%;
+      padding: 13px;
+      border-radius: 10px;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      border: 2px solid var(--surface-border);
+      font-size: 1.1rem;
+      font-weight: 800;
+      cursor: pointer;
+      margin-bottom: 22px;
+      font-family: inherit;
+      transition: background-color 0.15s ease, border-color 0.15s ease;
+    }
+
+    .unclassified-select-btn:hover {
+      background-color: var(--surface-hover);
+      border-color: var(--text-muted);
+    }
+
+    .unclassified-select-btn.current {
+      border-color: var(--text-color);
+    }
+
+    .modal-divider {
+      height: 1px;
+      background-color: var(--surface-border);
+      margin: 18px 0;
+    }
+
+    .poster-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .poster-actions .btn {
+      flex: 1;
+      justify-content: center;
+      font-size: 1rem;
+      padding: 11px 14px;
+    }
+
+    /* 입력 폼 */
+    .form-input {
+      width: 100%;
+      padding: 14px 16px;
+      border-radius: 10px;
+      border: 2px solid var(--surface-border);
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      font-size: 1.15rem;
+      font-family: inherit;
+      margin-bottom: 20px;
+    }
+
+    .form-input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .confirm-message {
+      font-size: 1.15rem;
+      color: var(--text-color);
+      margin-bottom: 24px;
+      line-height: 1.5;
+      word-break: keep-all;
+    }
+
+    /* 하단 안내 및 토스트 메시지 */
+    .footer-note {
+      margin-top: 28px;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background-color: #2E3446;
+      color: var(--text-color);
+      border: 2px solid #525B76;
+      padding: 12px 20px;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 700;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+      opacity: 0;
+      transform: translateY(10px);
+      pointer-events: none;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+      z-index: 2000;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    @media (max-width: 768px) {
+      body {
+        padding: 16px;
+      }
+      .tier-label {
+        width: 72px;
+        min-width: 72px;
+        font-size: 2.1rem;
+      }
+      .movie-card {
+        width: 132px;
+        height: 110px;
+      }
+      .card-title {
+        font-size: 1.15rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 상단 영역 -->
+  <header class="header">
+    <div class="title-group">
+      <h1>🎬 영화 티어리스트</h1>
+      <p>카드를 드래그해서 옮기거나, 카드를 클릭해 등급(S~F) 및 포스터를 설정해 보세요.</p>
+    </div>
+    <div class="top-controls">
+      <button type="button" class="btn btn-primary" id="btnAddMovie">＋ 영화 추가</button>
+      <button type="button" class="btn btn-danger" id="btnDeleteMode">🗑 영화 삭제</button>
+      <button type="button" class="btn" id="btnResetTier">↺ 초기화</button>
+    </div>
+  </header>
+
+  <!-- 삭제 모드 활성화 안내 배너 -->
+  <div class="mode-banner" id="deleteModeBanner">
+    <span>⚠️ 삭제 모드가 켜져 있습니다. 삭제할 영화 카드를 클릭하세요.</span>
+    <button type="button" class="btn" id="btnExitDeleteMode">삭제 모드 종료</button>
+  </div>
+
+  <!-- S ~ F 티어 보드 영역 -->
+  <main>
+    <section class="tier-board" aria-label="티어 영역">
+      <div class="tier-row" data-zone="S">
+        <div class="tier-label" data-tier="S">S</div>
+        <div class="tier-dropzone" data-zone="S"></div>
+      </div>
+      <div class="tier-row" data-zone="A">
+        <div class="tier-label" data-tier="A">A</div>
+        <div class="tier-dropzone" data-zone="A"></div>
+      </div>
+      <div class="tier-row" data-zone="B">
+        <div class="tier-label" data-tier="B">B</div>
+        <div class="tier-dropzone" data-zone="B"></div>
+      </div>
+      <div class="tier-row" data-zone="C">
+        <div class="tier-label" data-tier="C">C</div>
+        <div class="tier-dropzone" data-zone="C"></div>
+      </div>
+      <div class="tier-row" data-zone="D">
+        <div class="tier-label" data-tier="D">D</div>
+        <div class="tier-dropzone" data-zone="D"></div>
+      </div>
+      <div class="tier-row" data-zone="F">
+        <div class="tier-label" data-tier="F">F</div>
+        <div class="tier-dropzone" data-zone="F"></div>
+      </div>
+    </section>
+
+    <!-- 미분류 영역 -->
+    <section class="unclassified-section" data-zone="unclassified" aria-label="미분류 영화 영역">
+      <div class="unclassified-header">
+        <div class="unclassified-title">
+          미분류 영화 <span class="badge-count" id="unclassifiedCount">0편</span>
+        </div>
+        <span class="unclassified-hint">카드를 클릭하면 등급 이동·포스터 추가 메뉴가 열립니다</span>
+      </div>
+      <div class="unclassified-dropzone" id="unclassifiedZone" data-zone="unclassified"></div>
+    </section>
+  </main>
+
+  <footer class="footer-note">
+    <span>💾 변경 사항은 현재 사용 중인 기기의 브라우저에 자동 저장됩니다.</span>
+    <span>포스터 이미지는 직접 준비한 사진 파일을 카드 메뉴에서 업로드할 수 있습니다.</span>
+  </footer>
+
+  <!-- 숨김 파일 입력 (포스터 업로드용) -->
+  <input type="file" id="posterFileInput" accept="image/*" style="display: none;">
+
+  <!-- 1. 카드 선택 모달 (등급 버튼 이동 & 포스터 설정 & 개별 삭제) -->
+  <div class="modal-backdrop" id="cardActionModal" role="dialog" aria-modal="true" aria-labelledby="cardModalTitle">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 class="modal-title" id="cardModalTitle">영화 제목</h2>
+        <button type="button" class="modal-close" id="closeCardModal" aria-label="닫기">✕</button>
+      </div>
+
+      <span class="modal-section-label">이동할 등급 선택</span>
+      <div class="tier-btn-grid">
+        <button type="button" class="tier-select-btn" data-target="S">S</button>
+        <button type="button" class="tier-select-btn" data-target="A">A</button>
+        <button type="button" class="tier-select-btn" data-target="B">B</button>
+        <button type="button" class="tier-select-btn" data-target="C">C</button>
+        <button type="button" class="tier-select-btn" data-target="D">D</button>
+        <button type="button" class="tier-select-btn" data-target="F">F</button>
+      </div>
+      <button type="button" class="unclassified-select-btn" data-target="unclassified" id="btnMoveUnclassified">
+        미분류 칸으로 이동
+      </button>
+
+      <div class="modal-divider"></div>
+
+      <span class="modal-section-label">포스터 및 카드 관리</span>
+      <div class="poster-actions">
+        <button type="button" class="btn" id="btnUploadPoster">🖼 포스터 추가/변경</button>
+        <button type="button" class="btn" id="btnRemovePoster" style="display: none;">포스터 제거 (제목 카드로)</button>
+        <button type="button" class="btn btn-danger" id="btnDeleteFromModal">🗑 영화 삭제</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. 영화 추가 모달 -->
+  <div class="modal-backdrop" id="addMovieModal" role="dialog" aria-modal="true" aria-labelledby="addModalTitle">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 class="modal-title" id="addModalTitle">새 영화 추가</h2>
+        <button type="button" class="modal-close" id="closeAddModal" aria-label="닫기">✕</button>
+      </div>
+      <form id="addMovieForm">
+        <label class="modal-section-label" for="movieTitleInput">영화 제목</label>
+        <input type="text" id="movieTitleInput" class="form-input" placeholder="예: 올드보이, 비긴 어게인" maxlength="50" required>
+        <div class="modal-footer">
+          <button type="button" class="btn" id="cancelAddMovie">취소</button>
+          <button type="submit" class="btn btn-primary">미분류에 추가</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 3. 확인 모달 (영화 삭제 확인 / 배치 초기화 확인) -->
+  <div class="modal-backdrop" id="confirmModal" role="dialog" aria-modal="true" aria-labelledby="confirmModalTitle">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 class="modal-title" id="confirmModalTitle">확인</h2>
+        <button type="button" class="modal-close" id="closeConfirmModal" aria-label="닫기">✕</button>
+      </div>
+      <p class="confirm-message" id="confirmModalMessage"></p>
+      <div class="modal-footer">
+        <button type="button" class="btn" id="btnConfirmCancel">취소</button>
+        <button type="button" class="btn btn-primary" id="btnConfirmOk">확인</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 알림 토스트 -->
+  <div class="toast" id="toastMessage"></div>
+
+  <script>
+    (function () {
+      const STORAGE_KEY = 'movie_tier_list_state_v1';
+
+      // 기본 8편 영화 목록
+      const INITIAL_MOVIES = [
+        { id: 'movie-1', title: '기생충', tier: 'unclassified', order: 0, poster: null },
+        { id: 'movie-2', title: '인터스텔라', tier: 'unclassified', order: 1, poster: null },
+        { id: 'movie-3', title: '라라랜드', tier: 'unclassified', order: 2, poster: null },
+        { id: 'movie-4', title: '센과 치히로의 행방불명', tier: 'unclassified', order: 3, poster: null },
+        { id: 'movie-5', title: '어벤져스: 엔드게임', tier: 'unclassified', order: 4, poster: null },
+        { id: 'movie-6', title: '범죄도시', tier: 'unclassified', order: 5, poster: null },
+        { id: 'movie-7', title: '타이타닉', tier: 'unclassified', order: 6, poster: null },
+        { id: 'movie-8', title: '토이 스토리', tier: 'unclassified', order: 7, poster: null }
+      ];
+
+      let movies = [];
+      let selectedMovieId = null;
+      let draggedMovieId = null;
+      let isDeleteMode = false;
+      let confirmCallback = null;
+      let toastTimer = null;
+
+      // DOM 요소 참조
+      const btnAddMovie = document.getElementById('btnAddMovie');
+      const btnDeleteMode = document.getElementById('btnDeleteMode');
+      const btnExitDeleteMode = document.getElementById('btnExitDeleteMode');
+      const btnResetTier = document.getElementById('btnResetTier');
+      const deleteModeBanner = document.getElementById('deleteModeBanner');
+      const unclassifiedCount = document.getElementById('unclassifiedCount');
+      const posterFileInput = document.getElementById('posterFileInput');
+
+      // 카드 모달 요소
+      const cardActionModal = document.getElementById('cardActionModal');
+      const cardModalTitle = document.getElementById('cardModalTitle');
+      const closeCardModal = document.getElementById('closeCardModal');
+      const btnMoveUnclassified = document.getElementById('btnMoveUnclassified');
+      const btnUploadPoster = document.getElementById('btnUploadPoster');
+      const btnRemovePoster = document.getElementById('btnRemovePoster');
+      const btnDeleteFromModal = document.getElementById('btnDeleteFromModal');
+      const tierSelectBtns = document.querySelectorAll('.tier-select-btn');
+
+      // 추가 모달 요소
+      const addMovieModal = document.getElementById('addMovieModal');
+      const closeAddModal = document.getElementById('closeAddModal');
+      const cancelAddMovie = document.getElementById('cancelAddMovie');
+      const addMovieForm = document.getElementById('addMovieForm');
+      const movieTitleInput = document.getElementById('movieTitleInput');
+
+      // 확인 모달 요소
+      const confirmModal = document.getElementById('confirmModal');
+      const confirmModalTitle = document.getElementById('confirmModalTitle');
+      const confirmModalMessage = document.getElementById('confirmModalMessage');
+      const closeConfirmModal = document.getElementById('closeConfirmModal');
+      const btnConfirmCancel = document.getElementById('btnConfirmCancel');
+      const btnConfirmOk = document.getElementById('btnConfirmOk');
+
+      const toastMessage = document.getElementById('toastMessage');
+
+      // 토스트 출력
+      function showToast(text) {
+        toastMessage.textContent = text;
+        toastMessage.classList.add('show');
+        if (toastTimer) clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => {
+          toastMessage.classList.remove('show');
+        }, 2300);
+      }
+
+      // 브라우저 저장소에서 불러오기
+      function loadState() {
+        try {
+          const saved = localStorage.getItem(STORAGE_KEY);
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            if (Array.isArray(parsed)) {
+              movies = parsed;
+              return;
+            }
+          }
+        } catch (err) {
+          console.warn('저장된 데이터를 불러오지 못했습니다:', err);
+        }
+        movies = JSON.parse(JSON.stringify(INITIAL_MOVIES));
+      }
+
+      // 브라우저 저장소에 저장하기
+      function saveState() {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(movies));
+        } catch (err) {
+          showToast('포스터 이미지 용량이 커서 브라우저 저장 공간이 부족합니다.');
+        }
+      }
+
+      // 특정 구역의 다음 순서 값 계산
+      function getNextOrder(zone) {
+        const inZone = movies.filter(m => m.tier === zone);
+        if (inZone.length === 0) return 0;
+        return Math.max(...inZone.map(m => m.order || 0)) + 1;
+      }
+
+      // 화면 렌더링
+      function renderBoard() {
+        const zones = ['S', 'A', 'B', 'C', 'D', 'F', 'unclassified'];
+
+        zones.forEach(zone => {
+          const dropzone = document.querySelector(`.tier-dropzone[data-zone="${zone}"], .unclassified-dropzone[data-zone="${zone}"]`);
+          if (!dropzone) return;
+          dropzone.innerHTML = '';
+
+          const zoneMovies = movies
+            .filter(m => m.tier === zone)
+            .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+          if (zone === 'unclassified') {
+            unclassifiedCount.textContent = `${zoneMovies.length}편`;
+            if (zoneMovies.length === 0) {
+              const emptyMsg = document.createElement('div');
+              emptyMsg.className = 'empty-placeholder';
+              emptyMsg.textContent = '모든 영화를 등급에 배치했습니다! 새 영화를 추가하거나 카드를 이곳으로 옮길 수 있습니다.';
+              dropzone.appendChild(emptyMsg);
+            }
+          }
+
+          zoneMovies.forEach(movie => {
+            const card = createMovieCardElement(movie);
+            dropzone.appendChild(card);
+          });
+        });
+      }
+
+      // 개별 영화 카드 DOM 생성
+      function createMovieCardElement(movie) {
+        const card = document.createElement('div');
+        card.className = 'movie-card' + (movie.poster ? ' has-poster' : '');
+        card.draggable = true;
+        card.dataset.id = movie.id;
+        card.tabIndex = 0;
+        card.setAttribute('role', 'button');
+        card.setAttribute('aria-label', `${movie.title} 카드 (${movie.tier === 'unclassified' ? '미분류' : movie.tier + ' 등급'})`);
+
+        const deleteBadge = document.createElement('span');
+        deleteBadge.className = 'delete-badge';
+        deleteBadge.textContent = '삭제';
+        card.appendChild(deleteBadge);
+
+        if (movie.poster) {
+          const img = document.createElement('img');
+          img.className = 'card-poster';
+          img.src = movie.poster;
+          img.alt = `${movie.title} 포스터`;
+          card.appendChild(img);
+        }
+
+        const titleEl = document.createElement('div');
+        titleEl.className = 'card-title';
+        titleEl.textContent = movie.title;
+        card.appendChild(titleEl);
+
+        // 클릭 동작: 삭제 모드일 때는 삭제 확인, 일반 모드일 때는 등급/포스터 메뉴 열기
+        card.addEventListener('click', () => {
+          if (isDeleteMode) {
+            requestDeleteMovie(movie.id);
+          } else {
+            openCardModal(movie.id);
+          }
+        });
+
+        card.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            card.click();
+          }
+        });
+
+        // 드래그 시작/종료 이벤트
+        card.addEventListener('dragstart', (e) => {
+          draggedMovieId = movie.id;
+          card.classList.add('dragging');
+          e.dataTransfer.effectAllowed = 'move';
+          e.dataTransfer.setData('text/plain', movie.id);
+        });
+
+        card.addEventListener('dragend', () => {
+          draggedMovieId = null;
+          card.classList.remove('dragging');
+          document.querySelectorAll('.drop-active').forEach(el => el.classList.remove('drop-active'));
+        });
+
+        // 카드 위에 다른 카드를 드롭해 순서 맞추기
+        card.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+        });
+
+        card.addEventListener('drop', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const sourceId = draggedMovieId || e.dataTransfer.getData('text/plain');
+          if (!sourceId || sourceId === movie.id) return;
+          moveMovieNearTarget(sourceId, movie.id);
+        });
+
+        return card;
+      }
+
+      // 드롭존 이벤트 등록
+      function setupDropZones() {
+        const containers = document.querySelectorAll('.tier-row, .unclassified-section');
+
+        containers.forEach(container => {
+          const zone = container.dataset.zone;
+
+          container.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            container.classList.add('drop-active');
+          });
+
+          container.addEventListener('dragleave', (e) => {
+            if (!container.contains(e.relatedTarget)) {
+              container.classList.remove('drop-active');
+            }
+          });
+
+          container.addEventListener('drop', (e) => {
+            e.preventDefault();
+            container.classList.remove('drop-active');
+            const sourceId = draggedMovieId || e.dataTransfer.getData('text/plain');
+            if (!sourceId) return;
+            moveMovieToZone(sourceId, zone);
+          });
+        });
+      }
+
+      // 영화를 지정한 등급 칸의 맨 끝으로 이동
+      function moveMovieToZone(movieId, targetZone) {
+        const movie = movies.find(m => m.id === movieId);
+        if (!movie) return;
+
+        movie.tier = targetZone;
+        movie.order = getNextOrder(targetZone);
+
+        normalizeOrders(targetZone);
+        saveState();
+        renderBoard();
+      }
+
+      // 다른 카드 위에 드롭했을 때 해당 카드 위치로 삽입
+      function moveMovieNearTarget(sourceId, targetId) {
+        const sourceMovie = movies.find(m => m.id === sourceId);
+        const targetMovie = movies.find(m => m.id === targetId);
+        if (!sourceMovie || !targetMovie) return;
+
+        const targetZone = targetMovie.tier;
+        sourceMovie.tier = targetZone;
+
+        const zoneMovies = movies
+          .filter(m => m.tier === targetZone && m.id !== sourceId)
+          .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+        const targetIndex = zoneMovies.findIndex(m => m.id === targetId);
+        zoneMovies.splice(targetIndex, 0, sourceMovie);
+
+        zoneMovies.forEach((m, idx) => {
+          m.order = idx;
+        });
+
+        document.querySelectorAll('.drop-active').forEach(el => el.classList.remove('drop-active'));
+        saveState();
+        renderBoard();
+      }
+
+      function normalizeOrders(zone) {
+        movies
+          .filter(m => m.tier === zone)
+          .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+          .forEach((m, idx) => {
+            m.order = idx;
+          });
+      }
+
+      // 1. 카드 클릭 모달 열기/닫기
+      function openCardModal(movieId) {
+        const movie = movies.find(m => m.id === movieId);
+        if (!movie) return;
+
+        selectedMovieId = movieId;
+        cardModalTitle.textContent = movie.title;
+
+        tierSelectBtns.forEach(btn => {
+          btn.classList.toggle('current', btn.dataset.target === movie.tier);
+        });
+        btnMoveUnclassified.classList.toggle('current', movie.tier === 'unclassified');
+
+        btnRemovePoster.style.display = movie.poster ? 'inline-flex' : 'none';
+        cardActionModal.classList.add('open');
+      }
+
+      function closeCardActionModal() {
+        cardActionModal.classList.remove('open');
+        selectedMovieId = null;
+      }
+
+      tierSelectBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          if (!selectedMovieId) return;
+          const targetZone = btn.dataset.target;
+          moveMovieToZone(selectedMovieId, targetZone);
+          showToast(`'${cardModalTitle.textContent}' 카드를 ${targetZone} 등급으로 옮겼습니다.`);
+          closeCardActionModal();
+        });
+      });
+
+      btnMoveUnclassified.addEventListener('click', () => {
+        if (!selectedMovieId) return;
+        moveMovieToZone(selectedMovieId, 'unclassified');
+        showToast(`'${cardModalTitle.textContent}' 카드를 미분류 칸으로 옮겼습니다.`);
+        closeCardActionModal();
+      });
+
+      closeCardModal.addEventListener('click', closeCardActionModal);
+
+      // 포스터 업로드 및 이미지 리사이즈 (localStorage 용량 최적화)
+      btnUploadPoster.addEventListener('click', () => {
+        if (!selectedMovieId) return;
+        posterFileInput.value = '';
+        posterFileInput.click();
+      });
+
+      posterFileInput.addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file || !selectedMovieId) return;
+
+        if (!file.type.startsWith('image/')) {
+          showToast('이미지 파일만 업로드할 수 있습니다.');
+          return;
+        }
+
+        const targetMovieId = selectedMovieId;
+        const reader = new FileReader();
+        reader.onload = (loadEvent) => {
+          const img = new Image();
+          img.onload = () => {
+            // 카드 크기에 맞춰 적절한 해상도로 축소하여 브라우저 저장소 용량 확보
+            const maxWidth = 360;
+            const maxHeight = 520;
+            let width = img.width;
+            let height = img.height;
+
+            if (width > maxWidth || height > maxHeight) {
+              const ratio = Math.min(maxWidth / width, maxHeight / height);
+              width = Math.round(width * ratio);
+              height = Math.round(height * ratio);
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.84);
+            const movie = movies.find(m => m.id === targetMovieId);
+            if (movie) {
+              movie.poster = dataUrl;
+              saveState();
+              renderBoard();
+              showToast(`'${movie.title}' 포스터가 적용되었습니다.`);
+            }
+            closeCardActionModal();
+          };
+          img.src = loadEvent.target.result;
+        };
+        reader.readAsDataURL(file);
+      });
+
+      btnRemovePoster.addEventListener('click', () => {
+        if (!selectedMovieId) return;
+        const movie = movies.find(m => m.id === selectedMovieId);
+        if (movie) {
+          movie.poster = null;
+          saveState();
+          renderBoard();
+          showToast(`'${movie.title}' 포스터를 제거하고 제목 카드로 변경했습니다.`);
+        }
+        closeCardActionModal();
+      });
+
+      btnDeleteFromModal.addEventListener('click', () => {
+        if (!selectedMovieId) return;
+        const targetId = selectedMovieId;
+        closeCardActionModal();
+        requestDeleteMovie(targetId);
+      });
+
+      // 2. 영화 추가 모달 동작
+      function openAddModal() {
+        if (isDeleteMode) toggleDeleteMode(false);
+        movieTitleInput.value = '';
+        addMovieModal.classList.add('open');
+        setTimeout(() => movieTitleInput.focus(), 50);
+      }
+
+      function closeAddMovieModal() {
+        addMovieModal.classList.remove('open');
+      }
+
+      btnAddMovie.addEventListener('click', openAddModal);
+      closeAddModal.addEventListener('click', closeAddMovieModal);
+      cancelAddMovie.addEventListener('click', closeAddMovieModal);
+
+      addMovieForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const title = movieTitleInput.value.trim();
+        if (!title) return;
+
+        const newMovie = {
+          id: 'movie-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+          title: title,
+          tier: 'unclassified',
+          order: getNextOrder('unclassified'),
+          poster: null
+        };
+
+        movies.push(newMovie);
+        saveState();
+        renderBoard();
+        closeAddMovieModal();
+        showToast(`'${title}' 영화가 미분류 칸에 추가되었습니다.`);
+      });
+
+      // 3. 영화 삭제 모드 및 삭제 확인 절차
+      function toggleDeleteMode(forceState) {
+        isDeleteMode = typeof forceState === 'boolean' ? forceState : !isDeleteMode;
+        document.body.classList.toggle('delete-mode', isDeleteMode);
+        btnDeleteMode.classList.toggle('active', isDeleteMode);
+        deleteModeBanner.classList.toggle('show', isDeleteMode);
+        btnDeleteMode.textContent = isDeleteMode ? '✕ 삭제 모드 종료' : '🗑 영화 삭제';
+      }
+
+      btnDeleteMode.addEventListener('click', () => toggleDeleteMode());
+      btnExitDeleteMode.addEventListener('click', () => toggleDeleteMode(false));
+
+      function requestDeleteMovie(movieId) {
+        const movie = movies.find(m => m.id === movieId);
+        if (!movie) return;
+
+        openConfirmModal(
+          '영화 삭제 확인',
+          `'${movie.title}' 카드를 목록에서 삭제하시겠습니까? 삭제 후에는 되돌릴 수 없습니다.`,
+          '삭제하기',
+          true,
+          () => {
+            movies = movies.filter(m => m.id !== movieId);
+            saveState();
+            renderBoard();
+            showToast(`'${movie.title}' 카드가 삭제되었습니다.`);
+          }
+        );
+      }
+
+      // 4. 배치 초기화 (추가/삭제한 영화 목록은 유지하고 모두 미분류로 이동)
+      btnResetTier.addEventListener('click', () => {
+        if (isDeleteMode) toggleDeleteMode(false);
+
+        const classifiedCount = movies.filter(m => m.tier !== 'unclassified').length;
+        if (classifiedCount === 0) {
+          showToast('이미 모든 영화 카드가 미분류 칸에 있습니다.');
+          return;
+        }
+
+        openConfirmModal(
+          '배치 초기화 확인',
+          'S~F 등급에 배치된 모든 영화 카드를 미분류 칸으로 되돌리시겠습니까? (추가하거나 삭제한 영화 목록과 포스터는 그대로 유지됩니다.)',
+          '초기화 실행',
+          false,
+          () => {
+            movies.forEach((movie, index) => {
+              movie.tier = 'unclassified';
+              movie.order = index;
+            });
+            saveState();
+            renderBoard();
+            showToast('모든 카드가 미분류 칸으로 초기화되었습니다.');
+          }
+        );
+      });
+
+      // 공통 확인 모달 제어
+      function openConfirmModal(title, message, okLabel, isDanger, onConfirm) {
+        confirmModalTitle.textContent = title;
+        confirmModalMessage.textContent = message;
+        btnConfirmOk.textContent = okLabel;
+        btnConfirmOk.className = isDanger ? 'btn btn-danger active' : 'btn btn-primary';
+        confirmCallback = onConfirm;
+        confirmModal.classList.add('open');
+      }
+
+      function closeConfirm() {
+        confirmModal.classList.remove('open');
+        confirmCallback = null;
+      }
+
+      closeConfirmModal.addEventListener('click', closeConfirm);
+      btnConfirmCancel.addEventListener('click', closeConfirm);
+      btnConfirmOk.addEventListener('click', () => {
+        if (typeof confirmCallback === 'function') {
+          confirmCallback();
+        }
+        closeConfirm();
+      });
+
+      // 모달 바깥 영역 클릭 또는 ESC 키로 닫기
+      [cardActionModal, addMovieModal, confirmModal].forEach(backdrop => {
+        backdrop.addEventListener('click', (e) => {
+          if (e.target === backdrop) {
+            backdrop.classList.remove('open');
+          }
+        });
+      });
+
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          cardActionModal.classList.remove('open');
+          addMovieModal.classList.remove('open');
+          confirmModal.classList.remove('open');
+          if (isDeleteMode) toggleDeleteMode(false);
+        }
+      });
+
+      // 초기 실행
+      loadState();
+      setupDropZones();
+      renderBoard();
+    })();
+  </script>
+</body>
+</html>

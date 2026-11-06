@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>영화 티어리스트</title>
+<style>
+  :root {
+    --bg: #14161C;
+    --card: #232733;
+    --card-border: #3A4259;
+    --zone: #1B1F29;
+    --text: #F5F5F7;
+    --muted: #A5ACBF;
+    --danger: #E5484D;
+    --label-text: #14161C;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Pretendard", "Noto Sans KR", "Malgun Gothic", "Apple SD Gothic Neo", "Nanum Gothic", sans-serif;
+    font-size: 18px;
+    line-height: 1.5;
+  }
+  .wrap { max-width: 1500px; margin: 0 auto; padding: 28px 32px 72px; }
+
+  header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px 24px; margin-bottom: 12px; }
+  h1 { margin: 0; font-size: 38px; font-weight: 900; letter-spacing: -0.02em; }
+  .actions { display: flex; flex-wrap: wrap; gap: 10px; }
+  .hint { margin: 0 0 20px; color: var(--muted); font-size: 17px; }
+
+  .btn {
+    font: inherit; font-size: 18px; font-weight: 700;
+    padding: 12px 22px; border-radius: 10px; cursor: pointer;
+    background: #2C3347; color: var(--text); border: 1px solid #46506B;
+    transition: background .15s, border-color .15s;
+  }
+  .btn:hover { background: #38405A; border-color: #6A7596; }
+  .btn:focus-visible, .tierbtn:focus-visible { outline: 3px solid var(--text); outline-offset: 2px; }
+  .btn.primary { background: var(--text); color: var(--label-text); border-color: var(--text); }
+  .btn.primary:hover { background: #FFFFFF; }
+  .btn.active { background: var(--danger); border-color: var(--danger); color: #fff; }
+  .btn.warn:hover { border-color: var(--danger); }
+
+  .banner {
+    display: none; margin-bottom: 16px; padding: 12px 18px; border-radius: 10px;
+    background: rgba(229, 72, 77, .15); border: 1px solid var(--danger); font-weight: 700;
+  }
+  .delete-mode .banner { display: block; }
+
+  .tier { display: grid; grid-template-columns: 140px 1fr; margin-bottom: 10px; border-radius: 12px; overflow: hidden; }
+  .tier .label {
+    display: flex; align-items: center; justify-content: center;
+    color: var(--label-text); font-size: 58px; font-weight: 900;
+  }
+  .zone {
+    background: var(--zone); padding: 10px; min-height: 116px;
+    display: flex; flex-wrap: wrap; gap: 10px; align-content: flex-start;
+    transition: background .12s, box-shadow .12s;
+  }
+  .zone.over { background: #2A3042; box-shadow: inset 0 0 0 3px var(--text); }
+
+  .pool { margin-top: 32px; }
+  .pool h2 { margin: 0 0 10px; font-size: 26px; font-weight: 800; }
+  .pool .zone { border-radius: 12px; min-height: 130px; border: 2px dashed #2F3650; }
+  #zone-U:empty::before { content: "모든 영화를 분류했습니다."; color: var(--muted); align-self: center; padding: 8px 12px; }
+
+  .card {
+    position: relative; display: flex; align-items: center; justify-content: center; text-align: center;
+    min-width: 150px; max-width: 280px; padding: 18px 22px;
+    background: var(--card); border: 2px solid var(--card-border); border-radius: 12px;
+    font-size: 22px; font-weight: 700; line-height: 1.3; cursor: grab; user-select: none;
+    transition: border-color .12s, transform .12s;
+  }
+  .card:hover { border-color: #8892AD; transform: translateY(-1px); }
+  .card:focus-visible { outline: 3px solid var(--text); outline-offset: 2px; }
+  .card.dragging { opacity: .35; border-style: dashed; }
+  .card.poster { width: 132px; height: 198px; min-width: 0; padding: 0; overflow: hidden; }
+  .card.poster img { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
+  .card.poster .cap {
+    position: absolute; left: 0; right: 0; bottom: 0; padding: 30px 8px 9px;
+    background: linear-gradient(to bottom, transparent, rgba(0, 0, 0, .88));
+    font-size: 17px; font-weight: 800; text-align: center; pointer-events: none;
+  }
+  .delete-mode .card { border-color: var(--danger); cursor: pointer; }
+  .delete-mode .card::after {
+    content: "×"; position: absolute; top: 6px; right: 6px; width: 28px; height: 28px; border-radius: 50%;
+    background: var(--danger); color: #fff; font-size: 20px; font-weight: 900; line-height: 28px; text-align: center;
+  }
+
+  dialog {
+    background: var(--zone); color: var(--text); border: 1px solid var(--card-border); border-radius: 16px;
+    padding: 28px; width: min(560px, 92vw); font-family: inherit;
+  }
+  dialog::backdrop { background: rgba(0, 0, 0, .68); }
+  dialog h2 { margin: 0 0 6px; font-size: 26px; line-height: 1.3; word-break: keep-all; }
+  dialog .sub { margin: 0 0 18px; color: var(--muted); font-size: 17px; }
+  dialog .sec { margin: 22px 0 8px; font-size: 18px; font-weight: 800; }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; }
+  .dlg-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 10px; margin-top: 24px; }
+  .tierbtn {
+    min-width: 58px; height: 58px; font: inherit; font-size: 26px; font-weight: 900; cursor: pointer;
+    border-radius: 10px; border: 3px solid transparent; color: var(--label-text);
+  }
+  .tierbtn.u { min-width: 100px; background: #3A4259; color: var(--text); font-size: 18px; font-weight: 700; }
+  .tierbtn.current { border-color: var(--text); box-shadow: 0 0 0 2px #000 inset; }
+  .tierbtn:hover { filter: brightness(1.12); }
+  input[type="text"] {
+    width: 100%; font: inherit; font-size: 20px; padding: 12px 14px; border-radius: 10px;
+    background: var(--card); color: var(--text); border: 2px solid var(--card-border);
+  }
+  input[type="text"]:focus { outline: none; border-color: var(--text); }
+  .err { min-height: 24px; margin: 8px 0 0; color: #FF8A8E; font-size: 16px; }
+
+  .toast {
+    position: fixed; left: 50%; bottom: 28px; transform: translate(-50%, 20px); opacity: 0; pointer-events: none;
+    background: var(--card); border: 1px solid #6A7596; padding: 14px 22px; border-radius: 12px;
+    max-width: min(640px, 92vw); font-size: 17px; font-weight: 600; transition: opacity .2s, transform .2s; z-index: 50;
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  @media (max-width: 720px) {
+    .wrap { padding: 20px 14px 60px; }
+    h1 { font-size: 30px; }
+    .tier { grid-template-columns: 76px 1fr; }
+    .tier .label { font-size: 38px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap" id="app">
+  <header>
+    <h1>내 영화 티어리스트</h1>
+    <div class="actions">
+      <button class="btn primary" id="btn-add" type="button">영화 추가</button>
+      <button class="btn" id="btn-delete" type="button">영화 삭제</button>
+      <button class="btn warn" id="btn-reset" type="button">초기화</button>
+    </div>
+  </header>
+  <p class="hint">카드를 끌어서 등급 칸에 놓거나, 카드를 눌러 나오는 버튼으로 옮길 수 있습니다.</p>
+  <div class="banner" role="status">삭제 모드입니다. 지울 영화 카드를 눌러 주세요.</div>
+
+  <main id="tiers"></main>
+
+  <section class="pool">
+    <h2 id="pool-title">미분류</h2>
+    <div class="zone" id="zone-U" data-tier="U"></div>
+  </section>
+</div>
+
+<dialog id="dlg-card" aria-labelledby="card-title">
+  <h2 id="card-title"></h2>
+  <p class="sub" id="card-sub"></p>
+  <div class="sec">등급 이동</div>
+  <div class="row" id="card-tiers"></div>
+  <div class="sec">포스터</div>
+  <div class="row">
+    <button class="btn" id="btn-poster" type="button">포스터 추가</button>
+    <button class="btn" id="btn-poster-remove" type="button">포스터 제거</button>
+  </div>
+  <div class="dlg-actions"><button class="btn" id="card-close" type="button">닫기</button></div>
+</dialog>
+
+<dialog id="dlg-add" aria-labelledby="add-title">
+  <form id="form-add" autocomplete="off">
+    <h2 id="add-title">영화 추가</h2>
+    <p class="sub">추가한 영화는 미분류 칸에 놓입니다.</p>
+    <input type="text" id="add-input" maxlength="40" placeholder="영화 제목을 입력해 주세요" aria-label="영화 제목">
+    <p class="err" id="add-err" role="alert"></p>
+    <div class="dlg-actions">
+      <button class="btn" id="add-cancel" type="button">취소</button>
+      <button class="btn primary" type="submit">추가</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dlg-confirm" aria-labelledby="confirm-msg">
+  <h2 id="confirm-msg"></h2>
+  <p class="sub" id="confirm-sub"></p>
+  <div class="dlg-actions">
+    <button class="btn" id="confirm-cancel" type="button">취소</button>
+    <button class="btn active" id="confirm-ok" type="button">확인</button>
+  </div>
+</dialog>
+
+<input type="file" id="file-poster" accept="image/*" hidden>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  var TIERS = ['S', 'A', 'B', 'C', 'D', 'F'];
+  var COLORS = { S: '#E5484D', A: '#F08C3A', B: '#E9C53B', C: '#5BB974', D: '#4A90D9', F: '#8E7CC3' };
+  var KEY = 'movieTierlist.v1';
+  var DEFAULT_TITLES = ['기생충', '인터스텔라', '라라랜드', '센과 치히로의 행방불명', '어벤져스: 엔드게임', '범죄도시', '타이타닉', '토이 스토리'];
+
+  var state;
+  var deleteMode = false;
+  var dragId = null;
+  var activeId = null;
+  var confirmCb = null;
+  var toastTimer = null;
+
+  var $ = function (id) { return document.getElementById(id); };
+
+  /* ---------- 상태 ---------- */
+  function emptyTiers() {
+    var t = { U: [] };
+    TIERS.forEach(function (k) { t[k] = []; });
+    return t;
+  }
+
+  function defaultState() {
+    var s = { movies: {}, tiers: emptyTiers(), nextId: DEFAULT_TITLES.length + 1 };
+    DEFAULT_TITLES.forEach(function (title, i) {
+      var id = 'm' + (i + 1);
+      s.movies[id] = { id: id, title: title, poster: null };
+      s.tiers.U.push(id);
+    });
+    return s;
+  }
+
+  function loadState() {
+    try {
+      var raw = window.localStorage.getItem(KEY);
+      if (!raw) return defaultState();
+      var p = JSON.parse(raw);
+      if (!p || typeof p.movies !== 'object' || typeof p.tiers !== 'object') return defaultState();
+      var s = { movies: {}, tiers: emptyTiers(), nextId: Number(p.nextId) || 1 };
+      Object.keys(p.movies).forEach(function (id) {
+        var m = p.movies[id];
+        if (m && typeof m.title === 'string') {
+          s.movies[id] = { id: id, title: m.title, poster: typeof m.poster === 'string' ? m.poster : null };
+        }
+      });
+      var seen = {};
+      Object.keys(s.tiers).forEach(function (k) {
+        var arr = Array.isArray(p.tiers[k]) ? p.tiers[k] : [];
+        arr.forEach(function (id) {
+          if (s.movies[id] && !seen[id]) { seen[id] = true; s.tiers[k].push(id); }
+        });
+      });
+      Object.keys(s.movies).forEach(function (id) {
+        if (!seen[id]) s.tiers.U.push(id);
+      });
+      return s;
+    } catch (e) {
+      return defaultState();
+    }
+  }
+
+  function saveState() {
+    try {
+      window.localStorage.setItem(KEY, JSON.stringify(state));
+      return true;
+    } catch (e) {
+      toast('이 브라우저에 저장하지 못했습니다. 지금 화면은 정상이지만, 페이지를 닫으면 변경 내용이 사라질 수 있습니다.');
+      return false;
+    }
+  }
+
+  function toast(msg) {
+    var el = $('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.classList.remove('show'); }, 4500);
+  }
+
+  /* ---------- 화면 뼈대 ---------- */
+  function buildSkeleton() {
+    var host = $('tiers');
+    TIERS.forEach(function (t) {
+      var row = document.createElement('div');
+      row.className = 'tier';
+      var label = document.createElement('div');
+      label.className = 'label';
+      label.style.background = COLORS[t];
+      label.textContent = t;
+      var zone = document.createElement('div');
+      zone.className = 'zone';
+      zone.id = 'zone-' + t;
+      zone.dataset.tier = t;
+      zone.setAttribute('aria-label', t + ' 등급');
+      row.appendChild(label);
+      row.appendChild(zone);
+      host.appendChild(row);
+    });
+    document.querySelectorAll('.zone').forEach(bindZone);
+  }
+
+  function bindZone(zone) {
+    zone.addEventListener('dragover', function (e) {
+      if (!dragId) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      zone.classList.add('over');
+    });
+    zone.addEventListener('dragleave', function (e) {
+      if (!zone.contains(e.relatedTarget)) zone.classList.remove('over');
+    });
+    zone.addEventListener('drop', function (e) {
+      if (!dragId) return;
+      e.preventDefault();
+      zone.classList.remove('over');
+      var idx = getInsertIndex(zone, e.clientX, e.clientY);
+      moveCard(dragId, zone.dataset.tier, idx);
+    });
+  }
+
+  function getInsertIndex(zone, x, y) {
+    var cards = Array.prototype.filter.call(zone.querySelectorAll('.card'), function (c) { return c.dataset.id !== dragId; });
+    for (var i = 0; i < cards.length; i++) {
+      var r = cards[i].getBoundingClientRect();
+      if (y < r.top) return i;
+      if (y <= r.bottom && x < r.left + r.width / 2) return i;
+    }
+    return cards.length;
+  }
+
+  /* ---------- 카드 ---------- */
+  function makeCard(id) {
+    var m = state.movies[id];
+    var el = document.createElement('div');
+    el.className = 'card' + (m.poster ? ' poster' : '');
+    el.dataset.id = id;
+    el.tabIndex = 0;
+    el.setAttribute('role', 'button');
+    el.setAttribute('aria-label', m.title);
+    el.draggable = !deleteMode;
+
+    if (m.poster) {
+      var img = document.createElement('img');
+      img.src = m.poster;
+      img.alt = '';
+      img.draggable = false;
+      var cap = document.createElement('span');
+      cap.className = 'cap';
+      cap.textContent = m.title;
+      el.appendChild(img);
+      el.appendChild(cap);
+    } else {
+      el.textContent = m.title;
+    }
+
+    el.addEventListener('dragstart', function (e) {
+      dragId = id;
+      e.dataTransfer.effectAllowed = 'move';
+      try { e.dataTransfer.setData('text/plain', id); } catch (err) { /* 무시 */ }
+      setTimeout(function () { el.classList.add('dragging'); }, 0);
+    });
+    el.addEventListener('dragend', function () {
+      dragId = null;
+      el.classList.remove('dragging');
+      document.querySelectorAll('.zone.over').forEach(function (z) { z.classList.remove('over'); });
+    });
+    el.addEventListener('click', function () { onCardActivate(id); });
+    el.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onCardActivate(id); }
+    });
+    return el;
+  }
+
+  function onCardActivate(id) {
+    if (deleteMode) {
+      askConfirm('\u2018' + state.movies[id].title + '\u2019 영화를 삭제할까요?', '삭제한 영화는 되돌릴 수 없습니다.', function () {
+        deleteMovie(id);
+      });
+    } else {
+      openCardDialog(id);
+    }
+  }
+
+  function render() {
+    Object.keys(state.tiers).forEach(function (k) {
+      var zone = $('zone-' + k);
+      zone.replaceChildren();
+      state.tiers[k].forEach(function (id) { zone.appendChild(makeCard(id)); });
+    });
+    $('pool-title').textContent = '미분류 (' + state.tiers.U.length + ')';
+    document.body.classList.toggle('delete-mode', deleteMode);
+    var b = $('btn-delete');
+    b.textContent = deleteMode ? '삭제 모드 끝내기' : '영화 삭제';
+    b.classList.toggle('active', deleteMode);
+  }
+
+  /* ---------- 동작 ---------- */
+  function moveCard(id, tier, index) {
+    Object.keys(state.tiers).forEach(function (k) {
+      var i = state.tiers[k].indexOf(id);
+      if (i >= 0) state.tiers[k].splice(i, 1);
+    });
+    var arr = state.tiers[tier];
+    var idx = (index == null) ? arr.length : Math.max(0, Math.min(index, arr.length));
+    arr.splice(idx, 0, id);
+    saveState();
+    render();
+  }
+
+  function tierOf(id) {
+    var found = 'U';
+    Object.keys(state.tiers).forEach(function (k) {
+      if (state.tiers[k].indexOf(id) >= 0) found = k;
+    });
+    return found;
+  }
+
+  function deleteMovie(id) {
+    delete state.movies[id];
+    Object.keys(state.tiers).forEach(function (k) {
+      state.tiers[k] = state.tiers[k].filter(function (x) { return x !== id; });
+    });
+    saveState();
+    render();
+  }
+
+  function resetPlacement() {
+    state.tiers = emptyTiers();
+    Object.keys(state.movies).forEach(function (id) { state.tiers.U.push(id); });
+    saveState();
+    render();
+  }
+
+  /* ---------- 카드 대화상자 ---------- */
+  function openCardDialog(id) {
+    activeId = id;
+    var m = state.movies[id];
+    var cur = tierOf(id);
+    $('card-title').textContent = m.title;
+    $('card-sub').textContent = '현재 위치: ' + (cur === 'U' ? '미분류' : cur + ' 등급');
+
+    var host = $('card-tiers');
+    host.replaceChildren();
+    TIERS.forEach(function (t) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'tierbtn' + (t === cur ? ' current' : '');
+      b.style.background = COLORS[t];
+      b.textContent = t;
+      b.setAttribute('aria-label', t + ' 등급으로 이동');
+      b.addEventListener('click', function () { moveCard(id, t); closeDialog($('dlg-card')); });
+      host.appendChild(b);
+    });
+    var u = document.createElement('button');
+    u.type = 'button';
+    u.className = 'tierbtn u' + (cur === 'U' ? ' current' : '');
+    u.textContent = '미분류';
+    u.addEventListener('click', function () { moveCard(id, 'U'); closeDialog($('dlg-card')); });
+    host.appendChild(u);
+
+    $('btn-poster').textContent = m.poster ? '포스터 변경' : '포스터 추가';
+    $('btn-poster-remove').style.display = m.poster ? '' : 'none';
+    $('dlg-card').showModal();
+  }
+
+  function closeDialog(d) { if (d.open) d.close(); }
+
+  /* ---------- 포스터 ---------- */
+  function readPoster(file) {
+    return new Promise(function (resolve, reject) {
+      if (!file || file.type.indexOf('image/') !== 0) { reject(new Error('type')); return; }
+      var url = URL.createObjectURL(file);
+      var img = new Image();
+      img.onload = function () {
+        var max = 400;
+        var w = img.naturalWidth, h = img.naturalHeight;
+        var s = Math.min(1, max / Math.max(w, h));
+        var c = document.createElement('canvas');
+        c.width = Math.max(1, Math.round(w * s));
+        c.height = Math.max(1, Math.round(h * s));
+        var ctx = c.getContext('2d');
+        ctx.fillStyle = '#232733';
+        ctx.fillRect(0, 0, c.width, c.height);
+        ctx.drawImage(img, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(url);
+        resolve(c.toDataURL('image/jpeg', 0.85));
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('load')); };
+      img.src = url;
+    });
+  }
+
+  function setPoster(id, dataUrl) {
+    var m = state.movies[id];
+    if (!m) return;
+    var prev = m.poster;
+    m.poster = dataUrl;
+    if (!saveState()) {
+      // 저장에 실패해도 현재 화면에는 반영하되 안내는 saveState에서 이미 표시함
+      if (dataUrl && prev !== dataUrl) { /* 화면에는 유지 */ }
+    }
+    render();
+  }
+
+  /* ---------- 확인 대화상자 ---------- */
+  function askConfirm(msg, sub, cb) {
+    $('confirm-msg').textContent = msg;
+    $('confirm-sub').textContent = sub || '';
+    confirmCb = cb;
+    $('dlg-confirm').showModal();
+  }
+
+  /* ---------- 이벤트 연결 ---------- */
+  function bind() {
+    $('btn-add').addEventListener('click', function () {
+      $('add-input').value = '';
+      $('add-err').textContent = '';
+      $('dlg-add').showModal();
+      $('add-input').focus();
+    });
+    $('add-cancel').addEventListener('click', function () { closeDialog($('dlg-add')); });
+    $('form-add').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var title = $('add-input').value.replace(/\s+/g, ' ').trim();
+      if (!title) { $('add-err').textContent = '영화 제목을 입력해 주세요.'; return; }
+      var id = 'm' + (state.nextId++);
+      state.movies[id] = { id: id, title: title, poster: null };
+      state.tiers.U.push(id);
+      saveState();
+      render();
+      closeDialog($('dlg-add'));
+    });
+
+    $('btn-delete').addEventListener('click', function () { deleteMode = !deleteMode; render(); });
+
+    $('btn-reset').addEventListener('click', function () {
+      askConfirm('모든 영화를 미분류로 되돌릴까요?', '등급 배치만 처음 상태로 돌아갑니다. 추가하거나 삭제한 영화와 포스터는 그대로 유지됩니다.', function () {
+        resetPlacement();
+      });
+    });
+
+    $('confirm-cancel').addEventListener('click', function () { confirmCb = null; closeDialog($('dlg-confirm')); });
+    $('confirm-ok').addEventListener('click', function () {
+      var cb = confirmCb;
+      confirmCb = null;
+      closeDialog($('dlg-confirm'));
+      if (cb) cb();
+    });
+    $('dlg-confirm').addEventListener('close', function () { confirmCb = null; });
+
+    $('card-close').addEventListener('click', function () { closeDialog($('dlg-card')); });
+    $('btn-poster').addEventListener('click', function () { $('file-poster').click(); });
+    $('btn-poster-remove').addEventListener('click', function () {
+      if (activeId) setPoster(activeId, null);
+      closeDialog($('dlg-card'));
+    });
+    $('file-poster').addEventListener('change', function (e) {
+      var file = e.target.files && e.target.files[0];
+      e.target.value = '';
+      var id = activeId;
+      if (!file || !id) return;
+      readPoster(file).then(function (dataUrl) {
+        setPoster(id, dataUrl);
+        closeDialog($('dlg-card'));
+      }).catch(function () {
+        toast('이미지 파일을 불러오지 못했습니다. 사진 파일(JPG, PNG 등)을 선택해 주세요.');
+      });
+    });
+
+    ['dlg-card', 'dlg-add'].forEach(function (id) {
+      var d = $(id);
+      d.addEventListener('click', function (e) { if (e.target === d) d.close(); });
+    });
+  }
+
+  /* ---------- 시작 ---------- */
+  state = loadState();
+  buildSkeleton();
+  bind();
+  render();
+})();
+</script>
+</body>
+</html>
